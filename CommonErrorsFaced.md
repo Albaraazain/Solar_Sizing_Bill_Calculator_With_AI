@@ -2,6 +2,57 @@ Here's a comprehensive analysis of the errors encountered and lessons learned:
 
 # Jest ES Modules Configuration Troubleshooting Guide
 
+
+## BillApi Test Errors
+
+```plaintext
+CopyError: expect(jest.fn()).toHaveBeenCalledWith(...expected)
+- Expected
++ Received
+  "/bill/analyze",
+  {"referenceNumber": "123456789"},
++ {},
+```
+
+The issue was related to endpoint path construction and method parameters. We fixed it by:
+
+### Properly structuring `API_CONFIG` endpoints:
+
+```javascript
+ENDPOINTS: {
+    BILL: {
+        BASE: '/bill',
+        ANALYZE: '/analyze',
+        // ...
+    }
+}
+```
+
+### Updating test expectations to match the exact method signatures:
+
+```javascript
+expect(axiosClient.post).toHaveBeenCalledWith(
+    '/bill/analyze',
+    { referenceNumber: mockReferenceNumber },
+    {}  // Including empty config object
+);
+```
+
+### Fixing endpoint path construction in `BillApi`:
+
+```javascript
+// Before
+return this.post(API_CONFIG.ENDPOINTS.BILL.ANALYZE...);
+
+// After - proper path construction
+async analyzeBill(referenceNumber) {
+    return this.post(API_CONFIG.ENDPOINTS.BILL.ANALYZE, { referenceNumber });
+}
+```
+
+This resolved all four test errors related to endpoint paths and method parameters.
+
+
 ## Jest Mock Troubleshooting
 
 1. **Mock Order Matters**

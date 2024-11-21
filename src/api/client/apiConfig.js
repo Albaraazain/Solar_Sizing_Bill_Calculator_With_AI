@@ -4,12 +4,16 @@ export const API_CONFIG = {
     TIMEOUT: 10000,
     ENDPOINTS: {
         BILL: {
-            ANALYZE: '/bill/analyze',
-            GET: '/bill',
+            BASE: '/bill',
+            ANALYZE: '/analyze',
+            GET: '',
+            VALIDATE: '/validate',
+            HISTORY: '/history'
         },
         QUOTE: {
-            GENERATE: '/quote/generate',
-            GET: '/quote',
+            BASE: '/quote',
+            GENERATE: '/generate',
+            GET: ''
         }
     },
     HEADERS: {
