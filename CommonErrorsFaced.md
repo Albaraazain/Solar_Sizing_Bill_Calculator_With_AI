@@ -2,6 +2,26 @@ Here's a comprehensive analysis of the errors encountered and lessons learned:
 
 # Jest ES Modules Configuration Troubleshooting Guide
 
+## Jest Mock Initialization Error - Multiple Solutions Applied
+
+1. Initial Error: `ReferenceError: Cannot access 'mockEventBus' before initialization`
+   - Problem: Attempting to use variables in jest.mock() before they were initialized
+   - Solution: Define mock implementation inside jest.mock factory function
+   ```javascript
+   jest.mock('../../core/events/EventBus.js', () => {
+       const subscribers = new Map(); // Local to factory
+       return {
+           eventBus: {
+               subscribe: jest.fn((event, callback) => {
+                   if (!subscribers.has(event)) {
+                       subscribers.set(event, []);
+                   }
+                   subscribers.get(event).push(callback);
+               }),
+               // ... other methods
+           }
+       };
+   });
 
 ## BillApi Test Errors
 

@@ -1,50 +1,27 @@
 // src/js/app.js
-import { Router } from './router.js';
 import { Api } from '../api/index.js';
-import { eventBus } from './core/events/EventBus.js';
-import { ErrorHandler } from './core/utils/ErrorHandler.js';
+import { eventBus } from '../core/events/EventBus.js';
 
 export class App {
     constructor() {
-        this.router = null;
-        this.setupErrorHandling();
         this.setupEventListeners();
     }
 
     async initialize() {
         try {
-            // Initialize API layer
             const apiInitialized = await Api.initialize();
             if (!apiInitialized) {
-                throw new Error('API initialization failed');
+                this.handleError({ code: 'INIT_ERROR', message: 'API initialization failed' });
+                return false;
             }
-
-            // Initialize router after API is ready
-            this.router = new Router();
-            window.router = this.router; // For global access
-
-            // Start the application
-            this.router.navigate();
-
             return true;
         } catch (error) {
-            ErrorHandler.handle(error);
+            this.handleError(error);
             return false;
         }
     }
 
-    setupErrorHandling() {
-        window.onerror = (msg, url, line, col, error) => {
-            ErrorHandler.handle(error || new Error(msg));
-        };
-
-        window.onunhandledrejection = (event) => {
-            ErrorHandler.handle(event.reason);
-        };
-    }
-
     setupEventListeners() {
-        // Handle authentication events
         eventBus.subscribe('auth:unauthorized', () => {
             this.handleUnauthorized();
         });
@@ -53,33 +30,38 @@ export class App {
             this.handleSessionExpired();
         });
 
-        // Handle API errors
         eventBus.subscribe('error', (error) => {
             this.handleError(error);
         });
     }
 
     handleUnauthorized() {
-        window.toasts?.show('Please log in to continue', 'error');
-        this.router?.push('/login');
+        if (window.toasts) {
+            window.toasts.show('Please log in to continue', 'error');
+        }
     }
 
     handleSessionExpired() {
-        window.toasts?.show('Your session has expired. Please log in again.', 'warning');
-        this.router?.push('/login');
+        if (window.toasts) {
+            window.toasts.show('Your session has expired. Please log in again.', 'warning');
+        }
     }
 
     handleError(error) {
-        // Handle different types of errors appropriately
+        if (!window.toasts) return;
+
         switch (error.code) {
             case 'NETWORK_ERROR':
-                window.toasts?.show('Network error. Please check your connection.', 'error');
+                window.toasts.show('Network error. Please check your connection.', 'error');
                 break;
             case 'SERVER_ERROR':
-                window.toasts?.show('Server error. Please try again later.', 'error');
+                window.toasts.show('Server error. Please try again later.', 'error');
+                break;
+            case 'INIT_ERROR':
+                window.toasts.show('Failed to initialize application. Please refresh.', 'error');
                 break;
             default:
-                window.toasts?.show(error.message || 'An error occurred', 'error');
+                window.toasts.show(error.message || 'An error occurred', 'error');
         }
     }
 }
