@@ -1,6 +1,5 @@
 // src/core/state/State.js
-
-import { eventBus } from '../events/EventBus';
+import { eventBus } from '../events/EventBus.js';
 
 class State {
     constructor(initialState = {}) {
@@ -12,14 +11,12 @@ class State {
         const oldValue = this.state[key];
         this.state[key] = value;
 
-        // Publish state change event
         eventBus.publish('state:change', {
             key,
             oldValue,
             newValue: value
         });
 
-        // Call specific key listeners
         if (this.listeners.has(key)) {
             this.listeners.get(key).forEach(listener => {
                 listener(value, oldValue);
@@ -31,7 +28,6 @@ class State {
         return this.state[key];
     }
 
-    // Watch specific key changes
     watch(key, callback) {
         if (!this.listeners.has(key)) {
             this.listeners.set(key, new Set());
@@ -45,14 +41,13 @@ class State {
         };
     }
 
-    // For testing and cleanup
     clearState() {
         this.state = {};
         this.listeners.clear();
     }
 }
 
-// Create initial application state structure
+// Create initial application state
 const initialState = {
     user: null,
     billData: null,

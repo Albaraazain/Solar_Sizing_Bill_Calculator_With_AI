@@ -1,5 +1,4 @@
 // src/core/utils/ErrorHandler.js
-
 import { eventBus } from '../events/EventBus.js';
 import { ENV } from '../../config/environment.js';
 

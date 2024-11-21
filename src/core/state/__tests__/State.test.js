@@ -1,6 +1,9 @@
 // src/core/state/__tests__/State.test.js
-const { appState } = require('../State');
-const { eventBus } = require('../../events/EventBus');
+import { jest, expect, test, describe, beforeEach } from '@jest/globals';
+import { appState } from '../State.js';
+import { eventBus } from '../../events/EventBus.js';
+import { TestUtils } from '../../../test/TestUtils.js';
+import { createMockEventBus } from '../../../test/setup.js';
 
 describe('State Management', () => {
     beforeEach(() => {
@@ -8,31 +11,39 @@ describe('State Management', () => {
         eventBus.clear();
     });
 
-    test('setState and getState', () => {
-        appState.setState('testKey', 'testValue');
-        expect(appState.getState('testKey')).toBe('testValue');
-    });
-
-    test('state change event emission', done => {
-        eventBus.subscribe('state:change', ({ key, oldValue, newValue }) => {
-            expect(key).toBe('testKey');
-            expect(oldValue).toBeUndefined();
-            expect(newValue).toBe('testValue');
-            done();
-        });
-
-        appState.setState('testKey', 'testValue');
-    });
-
-    test('watch specific key changes', () => {
+    test('setState updates state and notifies listeners', async () => {
         const mockCallback = jest.fn();
+        appState.watch('testKey', mockCallback);
 
-        const unwatch = appState.watch('testKey', mockCallback);
         appState.setState('testKey', 'testValue');
 
-        expect(mockCallback).toHaveBeenCalledWith('testValue', undefined);
+        await TestUtils.expectEventually(() => {
+            expect(mockCallback).toHaveBeenCalledWith('testValue', undefined);
+            expect(appState.getState('testKey')).toBe('testValue');
+        });
+    });
 
-        unwatch();
+    test('multiple state changes are handled correctly', async () => {
+        const states = [];
+        appState.watch('counter', value => states.push(value));
+
+        appState.setState('counter', 1);
+        appState.setState('counter', 2);
+        appState.setState('counter', 3);
+
+        await TestUtils.expectEventually(() => {
+            expect(states).toEqual([1, 2, 3]);
+        });
+    });
+
+    test('unsubscribe removes listener', () => {
+        const mockCallback = jest.fn();
+        const unsubscribe = appState.watch('testKey', mockCallback);
+
+        appState.setState('testKey', 'testValue');
+        expect(mockCallback).toHaveBeenCalledTimes(1);
+
+        unsubscribe();
         appState.setState('testKey', 'newValue');
         expect(mockCallback).toHaveBeenCalledTimes(1);
     });

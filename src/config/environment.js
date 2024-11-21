@@ -18,7 +18,11 @@ const environments = {
     }
 };
 
-export const ENV = environments[process.env.NODE_ENV || 'development'];
+export const ENV = {
+    DEBUG: process.env.NODE_ENV !== 'production',
+    API_URL: process.env.API_URL || 'http://localhost:3000',
+    VERSION: '1.0.0'
+};
 
 // Freeze to prevent modifications
 Object.freeze(ENV);

@@ -1,6 +1,7 @@
 // src/core/events/__tests__/EventBus.test.js
-import { eventBus } from '../EventBus.js';
 import { jest, expect, test, describe, beforeEach } from '@jest/globals';
+import { eventBus } from '../EventBus.js';
+import { createMockEventBus } from '../../../test/setup.js';
 
 describe('EventBus', () => {
     beforeEach(() => {
