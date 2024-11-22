@@ -1,5 +1,4 @@
-// src/test/setup.js
-import { jest, expect, beforeEach } from '@jest/globals';
+import {beforeEach, jest} from '@jest/globals';
 
 // Global test setup
 beforeEach(() => {
@@ -7,13 +6,12 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-// Add global test utilities if needed
-const createMockEventBus = () => ({
-    subscribers: new Map(),
-    subscribe: jest.fn(),
-    publish: jest.fn(),
-    clear: jest.fn()
-});
+// Mock ENV
+global.ENV = {
+    DEBUG: true,
+    API_URL: 'http://localhost:3000',
+    VERSION: 'test'
+};
 
 // Add custom matchers if needed
 expect.extend({
@@ -34,4 +32,8 @@ expect.extend({
 });
 
 // Export utilities
-export { createMockEventBus };
+export const createMockEventBus = () => ({
+    subscribe: jest.fn(),
+    publish: jest.fn(),
+    clear: jest.fn()
+});

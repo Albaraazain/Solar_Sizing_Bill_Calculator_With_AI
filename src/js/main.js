@@ -1,32 +1,76 @@
-// src/js/main.js
-import { App } from './app.js';
-import { Toasts } from './components/Toasts.js';
-import '../input.css';
+import { Router } from "./router.js";
+import { Api } from "../api/index.js";
+import {Toasts} from "/src/js/Toasts.js";
 
-async function startApp() {
-    try {
-        // Initialize toast notifications
-        window.toasts = new Toasts();
+class App {
+    constructor() {
+        this.initializeApp().then(r => r);
+    }
+    async initializeApp() {
+        try {
+            // Initialize toasts
+            window.toasts = new Toasts();
 
-        // Create and initialize app
-        const app = new App();
-        const initialized = await app.initialize();
+            // Initialize API
+            await Api.initialize();
 
-        if (!initialized) {
-            window.toasts.show('Failed to initialize application', 'error');
+            // Initialize router
+            const router = new Router();
+            window.router = router;
+
+            // Set up global error handling
+            this.setupErrorHandling();
+
+            console.log('Application initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize application:', error);
+            this.handleInitializationError(error);
         }
-    } catch (error) {
-        console.error('Critical application error:', error);
-        document.getElementById('app').innerHTML = `
-            <div class="flex items-center justify-center h-screen">
-                <div class="text-center">
-                    <h1 class="text-2xl font-bold text-red-600 mb-4">Application Error</h1>
-                    <p class="text-gray-600">Failed to start the application. Please try refreshing the page.</p>
+    }
+
+    setupErrorHandling() {
+        window.onerror = (msg, url, line, col, error) => {
+            console.error('Global error:', { msg, url, line, col, error });
+            window.toasts?.show(
+                'An unexpected error occurred. Please try again.',
+                'error'
+            );
+        };
+
+        window.onunhandledrejection = (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            window.toasts?.show(
+                'An unexpected error occurred. Please try again.',
+                'error'
+            );
+        };
+    }
+
+    handleInitializationError(error) {
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `
+                <div class="flex items-center justify-center h-screen">
+                    <div class="text-center max-w-md mx-auto px-4">
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">
+                            Failed to Initialize Application
+                        </h1>
+                        <p class="text-gray-600 mb-6">
+                            We're having trouble starting the application. 
+                            Please refresh the page or try again later.
+                        </p>
+                        <button 
+                            onclick="window.location.reload()" 
+                            class="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                        >
+                            Refresh Page
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 }
 
 // Start the application
-startApp();
+new App();

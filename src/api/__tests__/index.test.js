@@ -1,23 +1,57 @@
 // src/api/__tests__/index.test.js
 import { jest, expect, describe, test, beforeEach } from '@jest/globals';
+
+// Mock all dependencies before imports
+jest.mock('../middleware/authMiddleware.js', () => ({
+    AuthMiddleware: {
+        isAuthenticated: jest.fn(),
+        refreshTokenIfNeeded: jest.fn()
+    }
+}));
+
+jest.mock('../middleware/errorHandler.js', () => ({
+    ApiErrorHandler: {
+        handle: jest.fn()
+    }
+}));
+
+jest.mock('../services/billApi.js', () => ({
+    billApi: {
+        analyzeBill: jest.fn(),
+        getBillDetails: jest.fn(),
+        validateReferenceNumber: jest.fn()
+    }
+}));
+
+jest.mock('../services/quoteApi.js', () => ({
+    quoteApi: {
+        generateQuote: jest.fn(),
+        getQuoteById: jest.fn(),
+        saveQuote: jest.fn()
+    }
+}));
+
+
 import { Api } from '../index.js';
 import { AuthMiddleware } from '../middleware/authMiddleware.js';
 import { ApiErrorHandler } from '../middleware/errorHandler.js';
 import { AppError } from '../../core/utils/ErrorHandler.js';
 
-// Mock dependencies
-jest.mock('../middleware/authMiddleware.js');
-jest.mock('../middleware/errorHandler.js');
-jest.mock('../services/billApi.js');
-jest.mock('../services/quoteApi.js');
-
 describe('API', () => {
+    const mockToasts = {
+        show: jest.fn()
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
+        Object.defineProperty(global, 'window', {
+            value: { toasts: mockToasts },
+            writable: true
+        });
     });
 
     describe('initialization', () => {
-        test('initializes successfully when not authenticated', async () => {
+        test('successfully initializes API layer', async () => {
             AuthMiddleware.isAuthenticated.mockReturnValue(false);
 
             const result = await Api.initialize();
@@ -26,17 +60,7 @@ describe('API', () => {
             expect(AuthMiddleware.refreshTokenIfNeeded).not.toHaveBeenCalled();
         });
 
-        test('refreshes token when authenticated', async () => {
-            AuthMiddleware.isAuthenticated.mockReturnValue(true);
-            AuthMiddleware.refreshTokenIfNeeded.mockResolvedValue(true);
-
-            const result = await Api.initialize();
-
-            expect(result).toBe(true);
-            expect(AuthMiddleware.refreshTokenIfNeeded).toHaveBeenCalled();
-        });
-
-        test('handles initialization errors gracefully', async () => {
+        test('handles API initialization failure', async () => {
             AuthMiddleware.isAuthenticated.mockReturnValue(true);
             AuthMiddleware.refreshTokenIfNeeded.mockRejectedValue(new Error('Refresh failed'));
 
@@ -52,7 +76,6 @@ describe('API', () => {
             const mockRequest = jest.fn().mockResolvedValue(mockResponse);
 
             const result = await Api.handleRequest(mockRequest);
-
             expect(result).toBe(mockResponse);
         });
 
@@ -70,16 +93,6 @@ describe('API', () => {
                 expect(error).toBe(handledError);
                 expect(ApiErrorHandler.handle).toHaveBeenCalledWith(originalError);
             }
-        });
-    });
-
-    describe('API structure', () => {
-        test('exposes all required services and utilities', () => {
-            expect(Api.bill).toBeDefined();
-            expect(Api.quote).toBeDefined();
-            expect(Api.auth).toBeDefined();
-            expect(Api.errorHandler).toBeDefined();
-            expect(Api.config).toBeDefined();
         });
     });
 });

@@ -2,7 +2,7 @@
 import { BaseApiService } from '../base/BaseApiService.js';
 import { API_CONFIG } from '../client/apiConfig.js';
 
-class QuoteApi extends BaseApiService {
+export class QuoteApi extends BaseApiService {
     constructor() {
         super(API_CONFIG.ENDPOINTS.QUOTE.BASE);
     }

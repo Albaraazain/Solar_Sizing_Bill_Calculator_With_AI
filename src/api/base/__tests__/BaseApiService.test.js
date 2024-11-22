@@ -1,93 +1,162 @@
 // src/api/base/__tests__/BaseApiService.test.js
 import { jest, expect, describe, test, beforeEach } from '@jest/globals';
-import { BaseApiService } from '../BaseApiService.js';
+
+// Mock the ErrorHandler and AppError
+jest.mock('../../../core/utils/ErrorHandler.js', () => ({
+    ErrorHandler: {
+        handle: jest.fn()
+    },
+    AppError: class AppError extends Error {
+        constructor(message, code, data = {}) {
+            super(message);
+            this.code = code;
+            this.data = data;
+        }
+    }
+}));
+
+// Mock the eventBus
+jest.mock('../../../core/events/EventBus.js', () => ({
+    eventBus: {
+        publish: jest.fn()
+    }
+}));
+
+// Mock axiosClient with all its methods
+jest.mock('../../client/axiosClient.js', () => ({
+    __esModule: true,
+    default: {
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+        delete: jest.fn()
+    }
+}));
+
 import axiosClient from '../../client/axiosClient.js';
-
-// Mock dependencies
-jest.mock('../../client/axiosClient.js');
-
-// what this test is for is that we need to make sure that the base api service is able to make requests to the server using the axios client
-// and that it is able to handle errors that may occur during the request
-// we also need to make sure that the base api service is able to handle different types of requests such as get, post, put, and delete
-// so in simple terms just an example: if we make a get request to the server, we should get a response from the server and if there is an error we should be able to handle it
-
+import { BaseApiService } from '../BaseApiService.js';
+import { ErrorHandler, AppError } from '../../../core/utils/ErrorHandler.js';
+import { eventBus } from '../../../core/events/EventBus.js';
 
 describe('BaseApiService', () => {
     let service;
-    const testEndpoint = '/test';
+    const baseURL = '/api';
+    const endpoint = '/test';
     const mockData = { test: 'data' };
     const mockResponse = { success: true };
+    const mockConfig = {};
 
     beforeEach(() => {
-        service = new BaseApiService('/api');
         jest.clearAllMocks();
+        service = new BaseApiService(baseURL);
     });
 
     describe('HTTP Methods', () => {
-        test('get method calls axios get with correct parameters', async () => {
-            axiosClient.get.mockResolvedValue(mockResponse);
+        test('GET request is handled correctly', async () => {
+            axiosClient.get.mockResolvedValueOnce(mockResponse);
 
-            const result = await service.get(testEndpoint);
+            const result = await service.get(endpoint, mockConfig);
 
-            expect(axiosClient.get).toHaveBeenCalledWith('/api/test', {});
+            expect(axiosClient.get).toHaveBeenCalledWith(`${baseURL}${endpoint}`, mockConfig);
             expect(result).toBe(mockResponse);
         });
 
-        test('post method calls axios post with correct parameters', async () => {
-            axiosClient.post.mockResolvedValue(mockResponse);
+        test('POST request is handled correctly', async () => {
+            axiosClient.post.mockResolvedValueOnce(mockResponse);
 
-            const result = await service.post(testEndpoint, mockData);
+            const result = await service.post(endpoint, mockData, mockConfig);
 
-            expect(axiosClient.post).toHaveBeenCalledWith('/api/test', mockData, {});
+            expect(axiosClient.post).toHaveBeenCalledWith(`${baseURL}${endpoint}`, mockData, mockConfig);
             expect(result).toBe(mockResponse);
         });
 
-        test('put method calls axios put with correct parameters', async () => {
-            axiosClient.put.mockResolvedValue(mockResponse);
+        test('PUT request is handled correctly', async () => {
+            axiosClient.put.mockResolvedValueOnce(mockResponse);
 
-            const result = await service.put(testEndpoint, mockData);
+            const result = await service.put(endpoint, mockData, mockConfig);
 
-            expect(axiosClient.put).toHaveBeenCalledWith('/api/test', mockData, {});
+            expect(axiosClient.put).toHaveBeenCalledWith(`${baseURL}${endpoint}`, mockData, mockConfig);
             expect(result).toBe(mockResponse);
         });
 
-        test('delete method calls axios delete with correct parameters', async () => {
-            axiosClient.delete.mockResolvedValue(mockResponse);
+        test('DELETE request is handled correctly', async () => {
+            axiosClient.delete.mockResolvedValueOnce(mockResponse);
 
-            const result = await service.delete(testEndpoint);
+            const result = await service.delete(endpoint, mockConfig);
 
-            expect(axiosClient.delete).toHaveBeenCalledWith('/api/test', {});
+            expect(axiosClient.delete).toHaveBeenCalledWith(`${baseURL}${endpoint}`, mockConfig);
             expect(result).toBe(mockResponse);
         });
     });
 
     describe('Error Handling', () => {
-        test('handles 400 error correctly', async () => {
-            const errorResponse = {
-                response: {
-                    status: 400,
-                    data: { message: 'Bad Request' }
-                }
-            };
-            axiosClient.get.mockRejectedValue(errorResponse);
-
-            try {
-                await service.get(testEndpoint);
-            } catch (error) {
-                expect(error.code).toBe('BAD_REQUEST');
-                expect(error.message).toBe('Bad Request');
+        const testErrorCases = [
+            {
+                status: 400,
+                message: 'Bad Request',
+                expectedCode: 'BAD_REQUEST'
+            },
+            {
+                status: 401,
+                message: 'Unauthorized access',
+                expectedCode: 'UNAUTHORIZED'
+            },
+            {
+                status: 404,
+                message: 'Resource not found',
+                expectedCode: 'NOT_FOUND'
+            },
+            {
+                status: 500,
+                message: 'Server error',
+                expectedCode: 'SERVER_ERROR'
             }
+        ];
+
+        testErrorCases.forEach(({ status, message, expectedCode }) => {
+            test(`handles ${status} error correctly`, async () => {
+                const errorResponse = {
+                    response: {
+                        status,
+                        data: { message }
+                    }
+                };
+                axiosClient.get.mockRejectedValueOnce(errorResponse);
+
+                try {
+                    await service.get(endpoint);
+                    fail('Should have thrown an error');
+                } catch (error) {
+                    expect(error.code).toBe(expectedCode);
+                    expect(error.message).toBe(message);
+                }
+            });
         });
 
         test('handles network error correctly', async () => {
             const networkError = new Error('Network Error');
-            axiosClient.get.mockRejectedValue(networkError);
+            axiosClient.get.mockRejectedValueOnce(networkError);
 
             try {
-                await service.get(testEndpoint);
+                await service.get(endpoint);
+                fail('Should have thrown an error');
             } catch (error) {
                 expect(error.code).toBe('NETWORK_ERROR');
                 expect(error.message).toBe('Network error');
+            }
+        });
+
+        test('handles unknown error correctly', async () => {
+            const unknownError = new Error('Unknown error');
+            axiosClient.get.mockRejectedValueOnce(unknownError);
+
+            try {
+                await service.get(endpoint);
+                fail('Should have thrown an error');
+            } catch (error) {
+                expect(error.code).toBe('NETWORK_ERROR');
+                expect(error.message).toBe('Network error');
+                expect(error.data.originalError).toBe(unknownError);
             }
         });
     });

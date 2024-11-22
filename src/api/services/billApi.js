@@ -2,7 +2,7 @@
 import { BaseApiService } from '../base/BaseApiService.js';
 import { API_CONFIG } from '../client/apiConfig.js';
 
-class BillApi extends BaseApiService {
+export class BillApi extends BaseApiService {
     constructor() {
         super(API_CONFIG.ENDPOINTS.BILL.BASE);
     }

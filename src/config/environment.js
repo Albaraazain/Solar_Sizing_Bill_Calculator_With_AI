@@ -1,5 +1,4 @@
 // src/config/environment.js
-
 const environments = {
     development: {
         API_URL: 'http://localhost:3000/api',
@@ -19,9 +18,10 @@ const environments = {
 };
 
 export const ENV = {
-    DEBUG: process.env.NODE_ENV !== 'production',
-    API_URL: process.env.API_URL || 'http://localhost:3000',
-    VERSION: '1.0.0'
+    DEBUG: import.meta.env.MODE !== 'production',
+    API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    VERSION: '1.0.0',
+    USE_MOCK_API: import.meta.env.VITE_USE_MOCK_API === 'true' || true
 };
 
 // Freeze to prevent modifications

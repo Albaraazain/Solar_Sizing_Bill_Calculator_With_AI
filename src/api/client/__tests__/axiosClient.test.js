@@ -1,40 +1,48 @@
 // src/api/client/__tests__/axiosClient.test.js
 import { jest, expect, describe, test, beforeEach } from '@jest/globals';
+
+// Mock modules first, before any imports
+jest.mock('../../../core/events/EventBus.js', () => ({
+    eventBus: {
+        publish: jest.fn(),
+        subscribe: jest.fn(),
+        clear: jest.fn()
+    }
+}));
+
+jest.mock('../../../core/utils/ErrorHandler.js', () => ({
+    ErrorHandler: {
+        handle: jest.fn()
+    }
+}));
+
+// Now import the modules
 import axiosClient from '../axiosClient.js';
 import { eventBus } from '../../../core/events/EventBus.js';
 import { ErrorHandler } from '../../../core/utils/ErrorHandler.js';
 
-// Mock dependencies
-jest.mock('../../../core/events/EventBus.js');
-jest.mock('../../../core/utils/ErrorHandler.js');
-
-// what this tests for is that the axios client adds the token to the request headers
-// when it is available in the local storage
-// meaning that the client is able to handle authenticated requests
-// it also tests that the client handles unauthorized responses
-// and request errors
-
-// Mock localStorage
-const localStorageMock = (() => {
-    let store = {};
-    return {
-        getItem: jest.fn(key => store[key] || null),
+describe('Axios Client', () => {
+    const localStorageMock = {
+        store: {},
+        getItem: jest.fn(key => localStorageMock.store[key] || null),
         setItem: jest.fn((key, value) => {
-            store[key] = value.toString();
+            localStorageMock.store[key] = value.toString();
+        }),
+        removeItem: jest.fn(key => {
+            delete localStorageMock.store[key];
         }),
         clear: jest.fn(() => {
-            store = {};
+            localStorageMock.store = {};
         })
     };
-})();
-Object.defineProperty(global, 'localStorage', {
-    value: localStorageMock
-});
 
-describe('Axios Client', () => {
     beforeEach(() => {
+        Object.defineProperty(global, 'localStorage', {
+            value: localStorageMock,
+            writable: true
+        });
         jest.clearAllMocks();
-        localStorage.clear();
+        localStorageMock.clear();
     });
 
     test('adds auth token to request headers when available', async () => {
@@ -54,6 +62,7 @@ describe('Axios Client', () => {
 
         try {
             await axiosClient.interceptors.response.handlers[0].rejected(error);
+            fail('Should have thrown an error');
         } catch (e) {
             expect(eventBus.publish).toHaveBeenCalledWith('auth:unauthorized');
             expect(ErrorHandler.handle).toHaveBeenCalledWith(error);
@@ -65,6 +74,7 @@ describe('Axios Client', () => {
 
         try {
             await axiosClient.interceptors.request.handlers[0].rejected(error);
+            fail('Should have thrown an error');
         } catch (e) {
             expect(ErrorHandler.handle).toHaveBeenCalledWith(error);
         }
