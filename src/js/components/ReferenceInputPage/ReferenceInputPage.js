@@ -15,6 +15,20 @@ export class ReferenceInputPage {
 
         this.injectBaseStyles();
     }
+        handleInputChange(event) {
+        const { id, value } = event.target;
+        this.setState({ [id]: value });
+    }
+
+    setState(newState) {
+        this.state = { ...this.state, ...newState };
+    
+        if (newState.error !== undefined || newState.isLoading !== undefined) {
+            // Only rerender the form if error or loading state changes
+            this.updateFormState();
+        }
+    }
+    
 
     render() {
         console.log('Rendering ReferenceInputPage');  // Debug log
@@ -164,8 +178,9 @@ export class ReferenceInputPage {
 
     handleInput(event) {
         const { id, value } = event.target;
-        this.setState({ [id]: value, error: null });
+        this.state[id] = value; // Update the state directly without triggering re-render
     }
+    
 
     async handleSubmit(event) {
         event.preventDefault();
@@ -180,7 +195,8 @@ export class ReferenceInputPage {
             );
 
             if (!validationResult.data.isValid) {
-                throw new Error('Invalid reference number');
+                print('Invalid reference number');
+                throw new Error('Invalid reference number');              
             }
 
             // Store reference number in sessionStorage for persistence

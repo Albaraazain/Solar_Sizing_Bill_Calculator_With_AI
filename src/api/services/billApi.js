@@ -20,8 +20,30 @@ export class BillApi extends BaseApiService {
     }
 
     async validateReferenceNumber(referenceNumber) {
-        return this.post(`${API_CONFIG.ENDPOINTS.BILL.VALIDATE}`, { referenceNumber });
+        try {
+            const response = await this.post(`${API_CONFIG.ENDPOINTS.BILL.VALIDATE}`, { referenceNumber });
+            if (response.status == 'success') {
+                return {
+                    valid: true,
+                    message: response.message,
+                    referenceNumber: response.reference_number
+                };
+            } else {
+                return {
+                    valid: false,
+                    message: response.message,
+                    referenceNumber: response.reference_number
+                };
+            }
+        } catch (error) {
+            console.error('Error validating reference number:', error);
+            return {
+                valid: false,
+                message: 'Unable to validate reference number due to a network or server error.'
+            };
+        }
     }
+    
 }
 
 export const billApi = new BillApi();
