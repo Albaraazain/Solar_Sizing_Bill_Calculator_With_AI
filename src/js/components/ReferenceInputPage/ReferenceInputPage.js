@@ -185,25 +185,24 @@ export class ReferenceInputPage {
     async handleSubmit(event) {
         event.preventDefault();
         if (this.state.isLoading) return;
-
+    
         try {
             this.setState({ isLoading: true, error: null });
-
+    
             // Validate reference number
-            const validationResult = await Api.bill.validateReferenceNumber(
-                this.state.referenceNumber
-            );
-
-            if (!validationResult.data.isValid) {
-                print('Invalid reference number');
-                throw new Error('Invalid reference number');              
+            const validationResult = await Api.bill.validateReferenceNumber(this.state.referenceNumber);
+    
+            if (!validationResult.isValid) {
+                console.log('Invalid reference number');
+                throw new Error('Invalid reference number');
             }
-
+    
             // Store reference number in sessionStorage for persistence
             sessionStorage.setItem('currentReferenceNumber', this.state.referenceNumber);
-
+    
             window.router.push('/bill-review');
         } catch (error) {
+            console.log('Error processing reference number:', error);
             this.setState({
                 error: error.message || 'Failed to process reference number',
                 isLoading: false

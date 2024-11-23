@@ -1,4 +1,5 @@
 // src/api/services/billApi.js
+import axios from 'axios';
 import { BaseApiService } from '../base/BaseApiService.js';
 import { API_CONFIG } from '../client/apiConfig.js';
 
@@ -21,26 +22,23 @@ export class BillApi extends BaseApiService {
 
     async validateReferenceNumber(referenceNumber) {
         try {
-            const response = await this.post(`${API_CONFIG.ENDPOINTS.BILL.VALIDATE}`, { referenceNumber });
-            if (response.status == 'success') {
-                return {
-                    valid: true,
-                    message: response.message,
-                    referenceNumber: response.reference_number
-                };
+            const payload = { referenceNumber };
+            console.log('Sending payload:', payload);  // Log the payload
+            const response = await axios.post('http://localhost:8000/api/bill/validate/', payload, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.data.isValid) {
+                console.log('Reference number is valid');
+                console.log(response.data);
             } else {
-                return {
-                    valid: false,
-                    message: response.message,
-                    referenceNumber: response.reference_number
-                };
+                console.error('Reference number is invalid:', response.data.error);
             }
+            return response.data;
         } catch (error) {
             console.error('Error validating reference number:', error);
-            return {
-                valid: false,
-                message: 'Unable to validate reference number due to a network or server error.'
-            };
+            throw error;
         }
     }
     
