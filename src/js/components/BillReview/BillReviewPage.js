@@ -1,6 +1,7 @@
 // src/js/components/BillReview/BillReviewPage.js
 import { Api } from "/src/api/index.js";
 import { BillPreview } from "../BillPreview.js";
+import { API_CONFIG } from '/src/api/client/apiConfig';
 import { gsap } from "gsap";
 import Chart from "chart.js/auto";
 import { CountUp } from 'countup.js';
@@ -23,8 +24,10 @@ export class BillReviewPage {
             if (!this.referenceNumber) {
                 throw new Error('No reference number available');
             }
-
+            console.log('Initializing BillReview with reference number:', this.referenceNumber);
+            console.log('path for bill:', `${API_CONFIG.ENDPOINTS.BILL.GET}/${this.referenceNumber}`);
             const response = await Api.bill.getBillDetails(this.referenceNumber);
+            console.log('Bill details:', response.data);
             if (!response || !response.data) {
                 throw new Error('No bill data available');
             }

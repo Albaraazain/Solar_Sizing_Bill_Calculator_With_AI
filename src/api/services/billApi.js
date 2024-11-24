@@ -13,7 +13,17 @@ export class BillApi extends BaseApiService {
     }
 
     async getBillDetails(referenceNumber) {
-        return this.get(`${API_CONFIG.ENDPOINTS.BILL.GET}/${referenceNumber}`);
+        try {
+            const url = `${API_CONFIG.ENDPOINTS.BILL.GET}/${referenceNumber}`;
+            console.log('Fetching bill details from URL:', url);  // Log the full URL
+            const response = await this.get(url);
+            console.log('Full response:', response);  // Log the full response object
+            console.log('Bill details:', response.data);  // Log the response data
+            return response;
+        } catch (error) {
+            console.error('Error fetching bill details:', error);
+            throw error;
+        }
     }
 
     async getConsumptionHistory(referenceNumber) {
