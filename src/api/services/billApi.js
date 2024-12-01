@@ -8,8 +8,21 @@ export class BillApi extends BaseApiService {
         super(API_CONFIG.ENDPOINTS.BILL.BASE);
     }
 
-    async analyzeBill(referenceNumber) {
-        return this.post(API_CONFIG.ENDPOINTS.BILL.ANALYZE, { referenceNumber });
+    async getQuoteDetails(systemSize) {
+        try {
+            const payload = { systemSize };
+            console.log('Sending payload for quote:', payload);  // Log the payload
+            const response = await axios.post('http://localhost:8000/api/quote/get/', payload, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log('Quote response:', response.data);  // Log the response data
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching quote:', error);
+            throw error;
+        }
     }
 
     async getBillDetails(referenceNumber) {
@@ -26,9 +39,9 @@ export class BillApi extends BaseApiService {
         }
     }
 
-    async getConsumptionHistory(referenceNumber) {
-        return this.get(`${API_CONFIG.ENDPOINTS.BILL.GET}/${referenceNumber}/history`);
-    }
+//    async getConsumptionHistory(referenceNumber) {
+//        return this.get(`${API_CONFIG.ENDPOINTS.BILL.GET}/${referenceNumber}/history`);
+//}
 
     async validateReferenceNumber(referenceNumber) {
         try {
