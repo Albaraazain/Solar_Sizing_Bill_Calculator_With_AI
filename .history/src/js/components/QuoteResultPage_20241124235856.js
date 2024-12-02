@@ -6,48 +6,22 @@ import { Api } from "/src/api/index.js";
 
 export class QuoteResultPage {
     constructor() {
+        try {
+            // Get bill data from API
+            this.billData = Api.bill.getBillData();
+            if (!this.billData) {
+                throw new Error('No bill data available');
+            }
+        } catch (error) {
+            console.error("Error in QuoteResultPage constructor:", error);
+            this.error = "Failed to load bill data. Please try again.";
+        }
         this.charts = {};
         this.progressBars = {};
         this.countUps = {};
-        this.quoteData = null;
     }
 
-    async initialize() {
-        try {
-            // Get reference number from session storage
-            const referenceNumber = sessionStorage.getItem('currentReferenceNumber');
-            if (!referenceNumber) {
-                throw new Error('No reference number available');
-            }
-
-            // Get bill details first
-            const billResponse = await Api.bill.getBillDetails(referenceNumber);
-            if (!billResponse || !billResponse.data || !billResponse.data.data) {
-                throw new Error('Failed to get bill details');
-            }
-
-            // Generate quote using bill details
-            const quoteResponse = await Api.quote.generateQuote(billResponse.data.data);
-            if (!quoteResponse || !quoteResponse.data) {
-                throw new Error('Failed to generate quote');
-            }
-
-            this.quoteData = quoteResponse.data;
-            console.log('Quote generated:', this.quoteData);
-
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize QuoteResultPage:', error);
-            window.toasts?.show('Failed to generate quote', 'error');
-            window.router.push('/bill-review');
-            return false;
-        }
-    }
-
-    async render() {
-        const initialized = await this.initialize();
-        if (!initialized) return;
-
+    render() {
         const app = document.getElementById("app");
         app.innerHTML = `
             <div class="h-screen w-full overflow-hidden bg-gray-50">
@@ -121,7 +95,6 @@ export class QuoteResultPage {
         this.initializeComponents();
     }
 
-
     renderSystemSizeCard() {
         return `
             <div class="bg-white rounded-lg p-4 shadow-sm">
@@ -147,7 +120,6 @@ export class QuoteResultPage {
             </div>
         `;
     }
-
 
     renderQuickStats() {
         return `
@@ -223,9 +195,9 @@ export class QuoteResultPage {
     }
 
     initializeComponents() {
-        if (!this.quoteData) {
-            console.error("No quote data available");
-            window.router.push("/bill-review");
+        if (!this.billData) {
+            console.error("No bill data available");
+            window.router.push("/");
             return;
         }
 
@@ -250,39 +222,29 @@ export class QuoteResultPage {
         const configs = [
             {
                 id: "system-size-value",
-                value: this.quoteData.systemDetails.systemSize,
+                value: this.billData.recommendedSystemSize,
                 decimals: 2
             },
             {
                 id: "daily-production",
-                value: this.quoteData.production.daily,
+                value: this.billData.estimatedDailyProduction,
                 decimals: 1
             },
             {
                 id: "monthly-savings",
-                value: this.quoteData.financial.monthlySavings,
+                value: this.billData.estimatedAnnualSavings / 12,
                 formatter: value => `PKR ${Math.round(value).toLocaleString()}`
             },
             {
                 id: "total-cost",
-                value: this.quoteData.financial.systemCost,
+                value: this.billData.estimatedSystemCost,
                 formatter: value => `PKR ${Math.round(value).toLocaleString()}`
             },
             {
                 id: "co2-value",
-                value: this.quoteData.environmental.co2Offset,
+                value: this.calculateCO2Offset(),
                 decimals: 1,
                 suffix: " tons/year"
-            },
-            {
-                id: "trees-value",
-                value: this.quoteData.environmental.treesEquivalent,
-                decimals: 0
-            },
-            {
-                id: "homes-value",
-                value: this.quoteData.environmental.homesEquivalent,
-                decimals: 0
             }
         ];
 
@@ -293,13 +255,10 @@ export class QuoteResultPage {
             this.countUps[config.id] = new CountUp(config.id, config.value, {
                 ...countUpOptions,
                 decimals: config.decimals || 0,
-                formattingFn: config.formatter,
-                suffix: config.suffix
+                formattingFn: config.formatter
             });
         });
     }
-
-
 
     startAnimations() {
         const cards = document.querySelectorAll('.bg-white, .bg-gradient-to-br');
@@ -329,7 +288,6 @@ export class QuoteResultPage {
             }
         });
     }
-
     initCharts() {
         this.initProductionChart();
         this.initSavingsChart();
@@ -340,16 +298,17 @@ export class QuoteResultPage {
         const ctx = document.getElementById("production-chart");
         if (!ctx) return;
 
+        const monthlyData = this.generateMonthlyData();
         const isMobile = window.innerWidth < 768;
 
         this.charts.production = new Chart(ctx, {
             type: "line",
             data: {
-                labels: this.quoteData.production.monthly.map(m => m.month),
+                labels: monthlyData.months,
                 datasets: [
                     {
                         label: "Solar Production",
-                        data: this.quoteData.production.monthly.map(m => m.production),
+                        data: monthlyData.production,
                         borderColor: "#10b981",
                         backgroundColor: "rgba(16, 185, 129, 0.1)",
                         fill: true,
@@ -359,7 +318,7 @@ export class QuoteResultPage {
                     },
                     {
                         label: "Energy Consumption",
-                        data: this.quoteData.production.monthly.map(m => m.consumption),
+                        data: monthlyData.consumption,
                         borderColor: "#ef4444",
                         backgroundColor: "rgba(239, 68, 68, 0.1)",
                         fill: true,
@@ -377,14 +336,21 @@ export class QuoteResultPage {
         const ctx = document.getElementById("savings-chart");
         if (!ctx) return;
 
+        const years = Array.from({ length: 26 }, (_, i) => `Year ${i}`);
+        const systemCost = this.billData.estimatedSystemCost;
+        const annualSavings = this.billData.estimatedAnnualSavings;
+
+        const cumulativeSavings = years.map((_, i) => i * annualSavings);
+        const investmentLine = years.map(() => systemCost);
+
         this.charts.savings = new Chart(ctx, {
             type: "line",
             data: {
-                labels: this.quoteData.financial.savingsTimeline.map(y => `Year ${y.year}`),
+                labels: years,
                 datasets: [
                     {
                         label: "Cumulative Savings",
-                        data: this.quoteData.financial.savingsTimeline.map(y => y.cumulativeSavings),
+                        data: cumulativeSavings,
                         borderColor: "#10b981",
                         backgroundColor: "rgba(16, 185, 129, 0.1)",
                         fill: true,
@@ -392,15 +358,24 @@ export class QuoteResultPage {
                     },
                     {
                         label: "Initial Investment",
-                        data: this.quoteData.financial.savingsTimeline.map(() =>
-                            this.quoteData.financial.systemCost),
+                        data: investmentLine,
                         borderColor: "#ef4444",
                         borderDash: [5, 5],
                         fill: false
                     }
                 ]
             },
-            options: this.getChartOptions('currency')
+            options: {
+                ...this.getChartOptions(),
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => `PKR ${value.toLocaleString()}`
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -408,13 +383,15 @@ export class QuoteResultPage {
         const ctx = document.getElementById("monthly-production-chart");
         if (!ctx) return;
 
+        const data = this.generateMonthlyData();
+
         this.charts.monthlyProduction = new Chart(ctx, {
             type: "bar",
             data: {
-                labels: this.quoteData.production.monthly.map(m => m.month),
+                labels: data.months,
                 datasets: [{
                     label: "Monthly Production",
-                    data: this.quoteData.production.monthly.map(m => m.production),
+                    data: data.production,
                     backgroundColor: "#10b981"
                 }]
             },
@@ -434,7 +411,7 @@ export class QuoteResultPage {
 
     getChartOptions() {
         const isMobile = window.innerWidth < 768;
-
+        
         return {
             responsive: true,
             maintainAspectRatio: false,
@@ -514,7 +491,7 @@ export class QuoteResultPage {
             return Math.round(baseProduction * factor);
         });
 
-        const consumption = months.map(() =>
+        const consumption = months.map(() => 
             Math.round(this.billData.unitsConsumed * (0.9 + Math.random() * 0.2))
         );
 

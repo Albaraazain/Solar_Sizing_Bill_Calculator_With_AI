@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/config/environment.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1732481984180,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1732481984180,
+            "name": "Commit-0",
+            "content": "// src/config/environment.js\r\nconst environments = {\r\n    development: {\r\n        API_URL: 'http://localhost:8000/api',\r\n        DEBUG: true,\r\n        VERSION: '1.0.0'\r\n    },\r\n    production: {\r\n        API_URL: 'http://localhost:8000/api',\r\n        DEBUG: false,\r\n        VERSION: '1.0.0'\r\n    },\r\n    test: {\r\n        API_URL: 'http://localhost:8000/api',\r\n        DEBUG: true,\r\n        VERSION: 'test'\r\n    }\r\n};\r\n\r\nexport const ENV = {\r\n    DEBUG: import.meta.env.MODE !== 'production',\r\n    API_URL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',\r\n    VERSION: '1.0.0',\r\n    USE_MOCK_API: import.meta.env.VITE_USE_MOCK_API === 'true' || false\r\n};\r\n\r\n// Freeze to prevent modifications\r\nObject.freeze(ENV);\r\n"
+        }
+    ]
+}

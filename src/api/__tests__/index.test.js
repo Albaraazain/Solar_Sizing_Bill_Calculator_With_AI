@@ -1,6 +1,13 @@
 // src/api/__tests__/index.test.js
 import { jest, expect, describe, test, beforeEach } from '@jest/globals';
 
+// Mock the environment first
+jest.mock('../../config/environment.js', () => ({
+    ENV: {
+        USE_MOCK_API: false
+    }
+}));
+
 // Mock all dependencies before imports
 jest.mock('../middleware/authMiddleware.js', () => ({
     AuthMiddleware: {
@@ -20,7 +27,8 @@ jest.mock('../services/billApi.js', () => ({
         analyzeBill: jest.fn(),
         getBillDetails: jest.fn(),
         validateReferenceNumber: jest.fn()
-    }
+    },
+    BillApi: jest.fn()
 }));
 
 jest.mock('../services/quoteApi.js', () => ({
@@ -28,9 +36,9 @@ jest.mock('../services/quoteApi.js', () => ({
         generateQuote: jest.fn(),
         getQuoteById: jest.fn(),
         saveQuote: jest.fn()
-    }
+    },
+    QuoteApi: jest.fn()
 }));
-
 
 import { Api } from '../index.js';
 import { AuthMiddleware } from '../middleware/authMiddleware.js';

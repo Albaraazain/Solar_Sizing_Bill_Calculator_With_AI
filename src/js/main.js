@@ -1,18 +1,23 @@
+// src/js/main.js
 import { Router } from "./router.js";
 import { Api } from "../api/index.js";
-import {Toasts} from "/src/js/Toasts.js";
+import { Toasts } from "./Toasts.js";
 
 class App {
     constructor() {
         this.initializeApp().then(r => r);
     }
+
     async initializeApp() {
         try {
             // Initialize toasts
             window.toasts = new Toasts();
 
-            // Initialize API
-            await Api.initialize();
+            // Initialize API and log its state
+            const apiInitialized = await Api.initialize();
+            console.log('API initialization result:', apiInitialized);
+            console.log('Api.bill:', Api.bill);
+            console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(Api.bill)));
 
             // Initialize router
             const router = new Router();

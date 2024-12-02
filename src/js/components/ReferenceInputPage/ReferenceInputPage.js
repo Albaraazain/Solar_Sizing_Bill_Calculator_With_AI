@@ -1,8 +1,6 @@
 // src/js/components/ReferenceInputPage/ReferenceInputPage.js
-import { Api } from '/src/api/index.js';
-import { animations } from '../../utils/animations.js';
+import { Api } from "/src/api/index.js";
 
-// src/js/components/ReferenceInputPage/ReferenceInputPage.js
 export class ReferenceInputPage {
     constructor() {
         this.state = {
@@ -15,35 +13,10 @@ export class ReferenceInputPage {
 
         this.injectBaseStyles();
     }
-        handleInputChange(event) {
-        const { id, value } = event.target;
-        this.setState({ [id]: value });
-    }
-
-    setState(newState) {
-        this.state = { ...this.state, ...newState };
-    
-        if (newState.error !== undefined || newState.isLoading !== undefined) {
-            // Only rerender the form if error or loading state changes
-            this.updateFormState();
-        }
-    }
-    
 
     render() {
-        console.log('Rendering ReferenceInputPage');  // Debug log
         const app = document.getElementById('app');
-        if (!app) {
-            console.error('App element not found');
-            return;
-        }
-
-        app.innerHTML = this.getTemplate();
-        this.attachEventListeners();
-    }
-
-    getTemplate() {
-        return `
+        app.innerHTML = `
             <div class="main-content">
                 <!-- Logo Section -->
                 <div class="logo-section">
@@ -67,6 +40,8 @@ export class ReferenceInputPage {
                 </div>
             </div>
         `;
+
+        this.attachEventListeners();
     }
 
     getFormTemplate() {
@@ -123,10 +98,18 @@ export class ReferenceInputPage {
                     class="submit-button"
                     ${this.state.isLoading ? "disabled" : ""}
                 >
-                    ${this.state.isLoading ? this.getLoadingTemplate() : "Generate Quote"}
+                    ${this.state.isLoading ?
+            `<span>Processing</span>
+                         <div class="spinner"></div>` :
+            'Generate Quote'
+        }
                 </button>
 
-                ${this.state.error ? this.getErrorTemplate() : ""}
+                ${this.state.error ? `
+                    <div class="error-message">
+                        ${this.state.error}
+                    </div>
+                ` : ''}
             </form>
         `;
     }
@@ -149,85 +132,23 @@ export class ReferenceInputPage {
         `;
     }
 
-    getLoadingTemplate() {
-        return `
-            <span>Processing</span>
-            <div class="spinner"></div>
-        `;
-    }
-
-    getErrorTemplate() {
-        return `
-            <div class="error-message">
-                ${this.state.error}
-            </div>
-        `;
-    }
-
-    attachEventListeners() {
-        const form = document.getElementById('quote-form');
-        if (form) {
-            form.addEventListener('submit', this.handleSubmit.bind(this));
-        }
-
-        const inputs = document.querySelectorAll('.form-input');
-        inputs.forEach(input => {
-            input.addEventListener('input', this.handleInput.bind(this));
-        });
-    }
-
-    handleInput(event) {
-        const { id, value } = event.target;
-        this.state[id] = value; // Update the state directly without triggering re-render
-    }
-    
-
-    async handleSubmit(event) {
-        event.preventDefault();
-        if (this.state.isLoading) return;
-    
-        try {
-            this.setState({ isLoading: true, error: null });
-    
-            // Validate reference number
-            const validationResult = await Api.bill.validateReferenceNumber(this.state.referenceNumber);
-    
-            if (!validationResult.isValid) {
-                console.log('Invalid reference number');
-                throw new Error('Invalid reference number');
-            }
-    
-            // Store reference number in sessionStorage for persistence
-            sessionStorage.setItem('currentReferenceNumber', this.state.referenceNumber);
-    
-            window.router.push('/bill-review');
-        } catch (error) {
-            console.log('Error processing reference number:', error);
-            this.setState({
-                error: error.message || 'Failed to process reference number',
-                isLoading: false
-            });
-        }
-    }
-
-    setState(newState) {
-        this.state = { ...this.state, ...newState };
-        this.updateFormState();
-    }
-
-    updateFormState() {
-        const form = document.getElementById('quote-form');
-        if (!form) return;
-        form.innerHTML = this.getFormTemplate();
-        this.attachEventListeners();
-    }
-
     injectBaseStyles() {
         const style = document.createElement('style');
         style.textContent = `
+            :root {
+                --color-bg: #ffffff;
+                --color-fg: #1f2937;
+                --color-bg-secondary: #f9fafb;
+                --color-primary: #10b981;
+                --color-primary-dark: #059669;
+                --color-primary-light: rgba(16, 185, 129, 0.1);
+            }
+
             .main-content {
                 min-height: 100vh;
                 background-color: var(--color-bg);
+                position: relative;
+                overflow: hidden;
             }
 
             .layout-grid {
@@ -248,10 +169,17 @@ export class ReferenceInputPage {
                 width: 100%;
             }
 
+            .logo-section {
+                position: absolute;
+                top: 2rem;
+                left: 3rem;
+                z-index: 10;
+            }
+
             .form-title {
                 font-size: 1.5rem;
                 font-weight: 600;
-                color: var(--color-fg);
+                color: var(--color-primary);
                 margin-bottom: 1.5rem;
             }
 
@@ -279,6 +207,7 @@ export class ReferenceInputPage {
             .form-input:focus {
                 border-color: var(--color-primary);
                 outline: none;
+                box-shadow: 0 0 0 3px var(--color-primary-light);
             }
 
             .submit-button {
@@ -297,7 +226,7 @@ export class ReferenceInputPage {
                 gap: 0.5rem;
             }
 
-            .submit-button:hover {
+            .submit-button:hover:not(:disabled) {
                 background-color: var(--color-primary-dark);
             }
 
@@ -357,8 +286,111 @@ export class ReferenceInputPage {
                 .right-section {
                     display: none;
                 }
+
+                .logo-section {
+                    position: relative;
+                    top: 0;
+                    left: 0;
+                    padding: 1rem;
+                }
+
+                .form-section {
+                    padding: 1rem;
+                }
             }
         `;
         document.head.appendChild(style);
     }
+
+    attachEventListeners() {
+        const form = document.getElementById('quote-form');
+        if (form) {
+            form.addEventListener('submit', this.handleSubmit.bind(this));
+        }
+
+        const inputs = document.querySelectorAll('.form-input');
+        inputs.forEach(input => {
+            input.addEventListener('input', this.handleInput.bind(this));
+        });
+
+        const whatsappInput = document.getElementById('whatsapp');
+        if (whatsappInput) {
+            whatsappInput.addEventListener('input', this.formatPhoneNumber.bind(this));
+        }
+    }
+
+    handleInput(event) {
+        const { id, value } = event.target;
+        this.state[id] = value;
+
+        if (this.state.error) {
+            this.setState({ error: null });
+        }
+    }
+
+    formatPhoneNumber(event) {
+        let input = event.target;
+        let value = input.value.replace(/[^\d+]/g, '');
+
+        if (value.startsWith('+92')) {
+            if (value.length > 3) {
+                value = value.slice(0, 3) + ' ' + value.slice(3, 6) + ' ' + value.slice(6, 13);
+            }
+        }
+
+        input.value = value;
+        this.state.whatsapp = value;
+    }
+
+    async handleSubmit(event) {
+        event.preventDefault();
+        if (this.state.isLoading) return;
+
+        console.log('Api object:', Api);
+        console.log('Api.bill:', Api.bill);
+        console.log('MockBillApi methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(Api.bill)));
+
+        try {
+            this.setState({ isLoading: true, error: null });
+            console.log('Submitting reference number:', this.state.referenceNumber);
+
+            const response = await Api.bill.validateReferenceNumber(this.state.referenceNumber);
+            console.log('Validation response:', response);
+
+            // Check the nested data structure
+            if (!response?.data?.isValid) {
+                throw new Error('Invalid reference number');
+            }
+
+            // Store the reference number
+            sessionStorage.setItem('currentReferenceNumber', this.state.referenceNumber);
+
+            // Navigate to bill review
+            window.router.push('/bill-review');
+        } catch (error) {
+            console.error('Validation error:', error);
+            this.setState({
+                error: error.message || 'Failed to validate reference number',
+                isLoading: false
+            });
+        }
+    }
+
+    setState(newState) {
+        this.state = { ...this.state, ...newState };
+        this.updateFormState();
+    }
+
+    updateFormState() {
+        const form = document.getElementById('quote-form');
+        if (!form) return;
+
+        form.innerHTML = this.getFormTemplate();
+        this.attachEventListeners();
+    }
 }
+
+
+
+
+
